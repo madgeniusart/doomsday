@@ -1,0 +1,118 @@
+[package]
+name = "universal-browser-sync"
+version = "1.0.0"
+description = "Cross-browser profile migration and synchronization"
+authors = ["Universal Browser Sync"]
+license = "MIT"
+repository = ""
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "universal_browser_sync_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "universal-browser-sync"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-ico", "image-png"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-shell = "2"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Database
+rusqlite = { version = "0.31", features = ["bundled", "backup"] }
+
+# Encryption (AES-256-GCM)
+aes-gcm = "0.10"
+rand = "0.8"
+
+# Key derivation
+pbkdf2 = { version = "0.12", features = ["hmac"] }
+sha2 = "0.10"
+hmac = "0.12"
+
+# Encoding
+base64 = "0.22"
+hex = "0.4"
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# NOTE: `keyring` is intentionally NOT listed here. Cargo's feature
+# unification means a bare `keyring = "2"` in this shared table would
+# pull in default features for every platform, fighting the Linux-only
+# backend selection below. It is declared once per platform in the
+# target-specific tables at the bottom of this file instead.
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# File traversal
+walkdir = "2"
+
+# JSON parsing for browser data
+json5 = "0.4"
+
+# INI parsing for Firefox prefs
+configparser = "3"
+
+# Compression for backups
+flate2 = "1"
+tar = "0.4"
+
+# Platform detection
+directories = "5"
+
+# Tilde / path expansion (used for macOS ~/Applications lookups)
+shellexpand = "3"
+
+# Safari bookmark plist parsing
+plist = "1"
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "2"
+# Default features select the macOS Keychain backend.
+keyring = "2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["dpapi", "wincrypt"] }
+# Default features select the Windows Credential Manager (DPAPI) backend.
+keyring = "2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Secret Service backend for the `keyring` crate on Linux.
+# rt-tokio pairs with this app's tokio runtime; crypto-rust avoids an
+# OpenSSL system dependency (pure-Rust crypto implementation instead).
+keyring = { version = "2", default-features = false, features = ["linux-secret-service-rt-tokio-crypto-rust"] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+opt-level = 3
+lto = true
+strip = true
+
+[profile.dev]
+incremental = true

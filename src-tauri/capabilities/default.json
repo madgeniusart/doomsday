@@ -1,0 +1,63 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capabilities for the main Universal Browser Sync window.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-set-title",
+
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-message",
+    "dialog:allow-confirm",
+
+    "notification:default",
+    "notification:allow-notify",
+
+    "shell:allow-open",
+
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        { "path": "$APPDATA/**" },
+        { "path": "$HOME/.config/**" },
+        { "path": "$HOME/.mozilla/**" },
+        { "path": "$HOME/Library/Application Support/**" },
+        { "path": "$HOME/Library/Safari/**" },
+        { "path": "$HOME/AppData/Local/**" },
+        { "path": "$HOME/AppData/Roaming/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        { "path": "$APPDATA/**" },
+        { "path": "$HOME/.config/**" },
+        { "path": "$HOME/.mozilla/**" },
+        { "path": "$HOME/Library/Application Support/**" },
+        { "path": "$HOME/Library/Safari/**" },
+        { "path": "$HOME/AppData/Local/**" },
+        { "path": "$HOME/AppData/Roaming/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        { "path": "$APPDATA/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        { "path": "$APPDATA/**" },
+        { "path": "$HOME/**" }
+      ]
+    }
+  ]
+}
