@@ -1,4 +1,8 @@
-use crate::adapters::{BrowserDetector, InstalledBrowser, BrowserKind, BrowserProfile};
+use crate::adapters::{
+    chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
+    brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
+};
+
 use tauri::State;
 use crate::AppState;
 
