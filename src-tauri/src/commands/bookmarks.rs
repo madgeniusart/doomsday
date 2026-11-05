@@ -1,4 +1,8 @@
-use crate::adapters::{Bookmark, BrowserAdapter, BrowserKind};
+use crate::adapters::{
+    chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
+    brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
+};
+
 use std::path::PathBuf;
 
 fn get_adapter(browser: &BrowserKind) -> Box<dyn BrowserAdapter> {
