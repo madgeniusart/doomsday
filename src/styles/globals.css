@@ -99,9 +99,9 @@
     @apply block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide;
   }
 
-  .divider {
-    @apply border-t border-white/8;
-  }
+ .divider {
+  @apply border-t border-white/[0.08];
+}
 
   .progress-bar {
     @apply h-1.5 bg-surface-700 rounded-full overflow-hidden;
