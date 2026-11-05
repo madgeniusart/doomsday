@@ -1,7 +1,8 @@
-use crate::adapters::{
+use crate::{
     chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
     brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
 };
+
 
 use std::path::PathBuf;
 
