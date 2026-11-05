@@ -58,7 +58,7 @@
   }
 
   .card-hover {
-    @apply card transition-all duration-200 hover:border-white/16 hover:bg-surface-700/50;
+    @apply card transition-all duration-200 hover:border-white/[0.16] hover:bg-surface-700/50;
   }
 
   .btn-primary {
@@ -99,9 +99,9 @@
     @apply block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide;
   }
 
-.divider {
-  @apply border-t border-white/[0.08];
-}
+  .divider {
+    @apply border-t border-white/[0.08];
+  }
 
   .progress-bar {
     @apply h-1.5 bg-surface-700 rounded-full overflow-hidden;
