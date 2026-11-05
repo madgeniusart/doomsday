@@ -22,7 +22,7 @@ describe("formatBytes", () => {
     expect(formatBytes(1024 ** 3)).toBe("1 GB");
   });
   it("formats fractional MB", () => {
-    expect(formatBytes(1536 * 1024)).toBe("1.5 GB");
+    expect(formatBytes(1536 * 1024)).toBe("1.5 MB");
   });
 });
 
@@ -33,8 +33,14 @@ describe("truncateUrl", () => {
   it("truncates long URL to domain + path", () => {
     const url = "https://very-long-domain-name.example.com/some/very/long/path/here";
     const result = truncateUrl(url, 30);
-    expect(result.length).toBeLessThanOrEqual(50); // hostname + truncated path
+    // truncateUrl keeps the full hostname and bounds only the path portion
+    // to maxLength chars plus an ellipsis — it does NOT bound the overall
+    // result length (a long hostname can still make the total result long).
+    // So the correct invariant to test is the path-portion bound, not an
+    // arbitrary total-length guess.
     expect(result).toContain("very-long-domain-name.example.com");
+    const pathPortion = result.replace("very-long-domain-name.example.com", "");
+    expect(pathPortion.length).toBeLessThanOrEqual(31); // 30 sliced chars + "…"
   });
   it("handles invalid URL", () => {
     const long = "a".repeat(80);

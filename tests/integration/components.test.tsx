@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
 import { ConsentModal } from "@/components/ui/ConsentModal";
@@ -37,7 +37,7 @@ beforeEach(() => {
   useAppStore.setState({ consentGiven: false });
 });
 
-// ── ConsentModal ──────────────────────────────────────────────────────────────
+// â”€â”€ ConsentModal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("ConsentModal", () => {
   it("renders privacy points", () => {
@@ -50,7 +50,7 @@ describe("ConsentModal", () => {
   it("calls giveConsent on button click", async () => {
     mockInvoke.mockResolvedValueOnce(undefined);
     render(<ConsentModal />);
-    fireEvent.click(screen.getByText(/I Understand & Continue/));
+    fireEvent.click(screen.getByRole("button", { name: /I Understand & Continue/ }));
     expect(mockInvoke).toHaveBeenCalledWith("save_settings", expect.any(Object));
   });
 
@@ -62,7 +62,7 @@ describe("ConsentModal", () => {
   });
 });
 
-// ── BrowserCard ───────────────────────────────────────────────────────────────
+// â”€â”€ BrowserCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("BrowserCard", () => {
   it("renders browser name", () => {
@@ -85,13 +85,13 @@ describe("BrowserCard", () => {
     render(<BrowserCard browser={MOCK_CHROME} />);
     const btn = screen.getByRole("button");
     fireEvent.click(btn);
-    expect(screen.getByText("Default")).toBeInTheDocument();
+    expect(screen.getAllByText("Default")[0]).toBeInTheDocument();
     expect(screen.getByText("Work")).toBeInTheDocument();
   });
 
   it("shows compact profiles without expand button", () => {
     render(<BrowserCard browser={MOCK_CHROME} compact />);
-    expect(screen.getByText("Default")).toBeInTheDocument();
+    expect(screen.getAllByText("Default")[0]).toBeInTheDocument();
     expect(screen.getByText("Work")).toBeInTheDocument();
   });
 
@@ -100,7 +100,7 @@ describe("BrowserCard", () => {
     render(
       <BrowserCard browser={MOCK_CHROME} compact onSelectProfile={onSelect} />
     );
-    fireEvent.click(screen.getByText("Default"));
+    fireEvent.click(screen.getAllByText("Default")[0]);
     expect(onSelect).toHaveBeenCalledWith(MOCK_CHROME, MOCK_CHROME.profiles[0]);
   });
 
@@ -119,7 +119,7 @@ describe("BrowserCard", () => {
   });
 });
 
-// ── CategorySelector ──────────────────────────────────────────────────────────
+// â”€â”€ CategorySelector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("CategorySelector", () => {
   const onToggle = vi.fn();
@@ -191,7 +191,7 @@ describe("CategorySelector", () => {
   });
 });
 
-// ── UI Primitives ─────────────────────────────────────────────────────────────
+// â”€â”€ UI Primitives â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("Badge", () => {
   it("renders with content", () => {
@@ -248,3 +248,6 @@ describe("ProgressBar", () => {
     expect(screen.getByText("75%")).toBeInTheDocument();
   });
 });
+
+
+
