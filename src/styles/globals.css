@@ -99,7 +99,7 @@
     @apply block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide;
   }
 
- .divider {
+.divider {
   @apply border-t border-white/[0.08];
 }
 
