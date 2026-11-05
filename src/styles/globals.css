@@ -54,7 +54,7 @@
 
 @layer components {
   .card {
-    @apply bg-surface-800 border border-white/8 rounded-xl;
+    @apply bg-surface-800 border border-white/[0.08] rounded-xl;
   }
 
   .card-hover {
