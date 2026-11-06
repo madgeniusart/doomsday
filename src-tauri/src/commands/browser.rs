@@ -1,7 +1,10 @@
-use crate::{
-    chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
-    brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
-};
+use crate::adapters::chrome::ChromeAdapter;
+use crate::adapters::firefox::FirefoxAdapter;
+use crate::adapters::edge::EdgeAdapter;
+use crate::adapters::brave::BraveAdapter;
+use crate::adapters::opera::OperaAdapter;
+use crate::adapters::safari::SafariAdapter;
+
 
 
 use tauri::State;
