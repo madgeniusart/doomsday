@@ -16,4 +16,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cargo Check
+        # Tells GitHub to step into the src-tauri folder before running the check
+        working-directory: ./src-tauri
         run: cargo check
