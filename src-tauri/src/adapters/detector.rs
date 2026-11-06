@@ -7,6 +7,7 @@ use super::{
     opera::OperaAdapter,
     safari::SafariAdapter,
 };
+use crate::adapters::BrowserAdapter;
 use anyhow::Result;
 use std::path::PathBuf;
 
