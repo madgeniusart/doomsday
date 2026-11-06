@@ -1,4 +1,9 @@
-use crate::adapters::{BrowserKind, HistoryEntry};
+use crate::BrowserKind;
+use crate::adapters::{
+    chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
+    brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
+};
+
 use std::path::PathBuf;
 
 #[tauri::command]
