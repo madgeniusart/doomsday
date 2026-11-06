@@ -1,3 +1,4 @@
+use crate::HistoryEntry;
 use crate::BrowserKind;
 use crate::adapters::{
     chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
