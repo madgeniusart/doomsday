@@ -1,12 +1,16 @@
 use super::{
-    BrowserKind, InstalledBrowser, BrowserProfile,
+    BrowserKind, InstalledBrowser,
     chrome::ChromeAdapter,
     firefox::FirefoxAdapter,
     edge::EdgeAdapter,
     brave::BraveAdapter,
     opera::OperaAdapter,
-    safari::SafariAdapter,
 };
+
+#[cfg(target_os = "macos")]
+use super::safari::SafariAdapter; // Prevents unused warnings on Windows/Linux
+
+use crate::adapters::BrowserAdapter;
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -181,7 +185,6 @@ impl BrowserDetector {
         };
         candidates.iter().find_map(|name| which(name))
     }
-
     #[cfg(target_os = "macos")]
     fn find_executable_macos(kind: &BrowserKind) -> Option<PathBuf> {
         let app_paths: &[&str] = match kind {
@@ -210,8 +213,6 @@ impl BrowserDetector {
 
     #[cfg(target_os = "windows")]
     fn find_executable_windows(kind: &BrowserKind) -> Option<PathBuf> {
-        // Read from registry HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths
-        // Fallback to well-known ProgramFiles locations
         let program_files = std::env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
         let program_files_x86 = std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| "C:\\Program Files (x86)".to_string());
         let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
@@ -236,7 +237,7 @@ impl BrowserDetector {
             BrowserKind::Opera => vec![
                 PathBuf::from(&local_app_data).join("Programs\\Opera\\opera.exe"),
             ],
-            BrowserKind::Safari => vec![], // No Safari on Windows
+            BrowserKind::Safari => vec![],
         };
 
         candidates.into_iter().find(|p| p.exists())

@@ -1,7 +1,9 @@
+use crate::DataCategory;
 use crate::BrowserKind;
 use crate::adapters::{
     chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
-    brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
+    brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter,
+    BrowserAdapter
 };
 
 use crate::database::{MigrationItemRecord, MigrationRecord};
@@ -94,9 +96,6 @@ pub async fn start_migration(
     let run_id_clone = run_id.clone();
     let req = request.clone();
 
-    // Run migration in a background task. We take an AppHandle (Clone + 'static)
-    // rather than State<'_, AppState> so the task can outlive this command call
-    // and still reach the database to persist the final result.
     tokio::spawn(async move {
         let result = run_migration(&run_id_clone, &req).await;
 
@@ -105,7 +104,7 @@ pub async fn start_migration(
             let mut state_map = migration_state().lock().unwrap();
             let status = match state_map.get_mut(&run_id_clone) {
                 Some(s) => s,
-                None => return, // cancelled + removed, or impossible race
+                None => return,
             };
 
             match result {
@@ -124,8 +123,6 @@ pub async fn start_migration(
             status.clone()
         };
 
-        // Persist the run and its per-item report so history and the report
-        // screen survive an app restart.
         if let Err(e) = persist_migration_result(&app, &req, &final_snapshot) {
             log::error!("Failed to persist migration run {}: {}", run_id_clone, e);
         }
@@ -134,7 +131,6 @@ pub async fn start_migration(
     Ok(run_id)
 }
 
-/// Write the completed run and its items to SQLite.
 fn persist_migration_result(
     app: &AppHandle,
     request: &MigrationRequest,
@@ -195,23 +191,18 @@ fn persist_migration_result(
 
     Ok(())
 }
-
 async fn run_migration(run_id: &str, request: &MigrationRequest) -> anyhow::Result<()> {
-    use crate::adapters::*;
-
     let source_path = std::path::PathBuf::from(&request.source_profile_path);
     let dest_path = std::path::PathBuf::from(&request.dest_profile_path);
 
     let total = request.data_categories.len() as u64;
     let mut processed = 0u64;
 
-    // Safety: ensure we never write to source profile
     if source_path == dest_path {
         return Err(anyhow::anyhow!("Source and destination profiles cannot be the same"));
     }
 
     for category in &request.data_categories {
-        // Check for cancellation
         {
             let state_map = migration_state().lock().unwrap();
             if let Some(s) = state_map.get(run_id) {
@@ -221,7 +212,6 @@ async fn run_migration(run_id: &str, request: &MigrationRequest) -> anyhow::Resu
             }
         }
 
-        // Update progress
         {
             let mut state_map = migration_state().lock().unwrap();
             if let Some(s) = state_map.get_mut(run_id) {
@@ -266,14 +256,11 @@ async fn migrate_category(
     source_path: &std::path::Path,
     dest_path: &std::path::Path,
 ) -> anyhow::Result<Vec<MigrationItemResult>> {
-    use crate::adapters::*;
-
     let source_path = source_path.to_path_buf();
     let dest_path = dest_path.to_path_buf();
 
     match category {
         DataCategory::Bookmarks => {
-            // Read source bookmarks
             let bookmarks = match &request.source_browser {
                 BrowserKind::Chrome => ChromeAdapter::new().read_bookmarks(&source_path)?,
                 BrowserKind::Firefox => FirefoxAdapter::new().read_bookmarks(&source_path)?,
@@ -284,8 +271,6 @@ async fn migrate_category(
             };
 
             if !request.dry_run {
-                // Write bookmarks to destination in Netscape HTML format
-                // then place in destination profile if same format, otherwise export
                 write_bookmarks_to_dest(&bookmarks, &dest_path, &request.dest_browser)?;
             }
 
@@ -313,9 +298,7 @@ async fn migrate_category(
                 BrowserKind::Safari => SafariAdapter::new().read_history(&source_path, 90)?,
             };
 
-            // History write is complex and browser-specific.
-            // We export to JSON for now; direct injection requires browser-specific SQLite.
-            if !request.dry_run && history.is_empty() == false {
+            if !request.dry_run && !history.is_empty() {
                 let export_path = dest_path.join("ubs_history_export.json");
                 let json = serde_json::to_string_pretty(&history)?;
                 std::fs::write(&export_path, json)?;
@@ -334,7 +317,6 @@ async fn migrate_category(
 
             Ok(results)
         }
-
         DataCategory::Cookies => {
             let cookies = match &request.source_browser {
                 BrowserKind::Chrome => ChromeAdapter::new().read_cookies(&source_path)?,
@@ -365,7 +347,6 @@ async fn migrate_category(
                 })
                 .collect();
 
-            // Auth cookies: note as skipped
             if auth_count > 0 {
                 results.push(MigrationItemResult {
                     category: "Cookies".to_string(),
@@ -413,8 +394,6 @@ async fn migrate_category(
         }
 
         DataCategory::Preferences => {
-            // Browser preferences are highly browser-specific
-            // We export source prefs as JSON reference
             let prefs_path = source_path.join("Preferences");
             let ff_prefs = source_path.join("prefs.js");
 
@@ -451,12 +430,9 @@ fn write_bookmarks_to_dest(
     dest_browser: &BrowserKind,
 ) -> anyhow::Result<()> {
     if dest_browser.is_chromium_based() {
-        // Write Netscape HTML import file to the profile directory
         let html = crate::commands::bookmarks::bookmarks_to_netscape_html(bookmarks);
         let export_path = dest_path.join("ubs_bookmarks_import.html");
         std::fs::write(export_path, html)?;
-        // Note: programmatic injection into Chrome's Bookmarks JSON requires matching
-        // Chrome's sync hash; using the HTML import file is the supported path.
     } else if *dest_browser == BrowserKind::Firefox {
         let html = crate::commands::bookmarks::bookmarks_to_netscape_html(bookmarks);
         let export_path = dest_path.join("ubs_bookmarks_import.html");
@@ -495,7 +471,6 @@ pub async fn get_migration_report(
     run_id: String,
     state: State<'_, AppState>,
 ) -> Result<Option<Vec<MigrationItemResult>>, String> {
-    // Prefer the in-memory copy (covers runs completed in this session).
     {
         let state_map = migration_state().lock().unwrap();
         if let Some(status) = state_map.get(&run_id) {
@@ -503,7 +478,6 @@ pub async fn get_migration_report(
         }
     }
 
-    // Fall back to the database for runs from a previous app session.
     let db = state.db.lock().unwrap();
     let items = db.get_migration_items(&run_id).map_err(|e| e.to_string())?;
 
