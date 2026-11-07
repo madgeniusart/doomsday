@@ -31,105 +31,8 @@ impl AppDatabase {
             let mut stmt = self
                 .conn
                 .prepare("SELECT version FROM schema_migrations ORDER BY version")?;
-            stmt.query_map([], |row| row.get(0))?
-                .filter_map(|r| r.ok())
-                .collect()
-        };
-
-        let migrations = Self::migrations();
-        for (version, sql) in &migrations {
-            if !applied.contains(version) {
-                self.conn.execute_batch(sql)?;
-                self.conn.execute(
-                    "INSERT INTO schema_migrations (version) VALUES (?1)",
-                    params![version],
-                )?;
-                log::info!("Applied database migration v{}", version);
-            }
-        }
-        Ok(())
-    }
-
-    fn migrations() -> Vec<(i64, &'static str)> {
-        vec![
-            (1, include_str!("../../migrations/001_initial.sql")),
-            (2, include_str!("../../migrations/002_migration_history.sql")),
-            (3, include_str!("../../migrations/003_backups.sql")),
-        ]
-    }
-
-    pub fn conn(&self) -> &Connection {
-        &self.conn
-    }
-
-    pub fn conn_mut(&mut self) -> &mut Connection {
-        &mut self.conn
-    }
-
-    /// Record a completed migration run
-    pub fn record_migration(&self, record: &MigrationRecord) -> Result<()> {
-        self.conn.execute(
-            "INSERT INTO migration_runs
-             (id, source_browser, source_profile, dest_browser, dest_profile,
-              data_types, status, started_at, completed_at, items_migrated,
-              items_failed, error_message)
-             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",
-            params![
-                record.id,
-                record.source_browser,
-                record.source_profile,
-                record.dest_browser,
-                record.dest_profile,
-                record.data_types,
-                record.status,
-                record.started_at,
-                record.completed_at,
-                record.items_migrated,
-                record.items_failed,
-                record.error_message,
-            ],
-        )?;
-        Ok(())
-    }
-
-   use anyhow::Result;
-use rusqlite::{Connection, params};
-use std::path::Path;
-
-/// Central application database
-pub struct AppDatabase {
-    conn: Connection,
-}
-
-impl AppDatabase {
-    pub fn new(path: &Path) -> Result<Self> {
-        let conn = Connection::open(path)?;
-
-        // Enable WAL mode for concurrent reads
-        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL;")?;
-
-        let mut db = AppDatabase { conn };
-        db.run_migrations()?;
-        Ok(db)
-    }
-
-    fn run_migrations(&mut self) -> Result<()> {
-        self.conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS schema_migrations (
-                version INTEGER PRIMARY KEY,
-                applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );",
-        )?;
-
-        let applied: Vec<i64> = {
-            let mut stmt = self
-                .conn
-                .prepare("SELECT version FROM schema_migrations ORDER BY version")?;
             
-            // Fixed E0597: Evaluate the query map safely by assigning it explicitly 
-            // before breaking down the iterator chaining
             let rows = stmt.query_map([], |row| row.get::<_, i64>(0))?;
-            
             rows.filter_map(|r| r.ok()).collect()
         };
 
@@ -188,7 +91,7 @@ impl AppDatabase {
         )?;
         Ok(())
     }
-/// Persist the per-item results of a migration run so the report
+    /// Persist the per-item results of a migration run so the report
     /// survives an app restart. Called once a run reaches a terminal state.
     pub fn record_migration_items(
         &self,
