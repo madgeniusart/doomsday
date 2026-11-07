@@ -38,13 +38,13 @@ impl BrowserAdapter for SafariAdapter {
         Ok(vec![])
     }
 
-    fn read_bookmarks(&self, profile_path: &PathBuf) -> Result<Vec<Bookmark>> {
+    fn read_bookmarks(&self, _profile_path: &PathBuf) -> Result<Vec<Bookmark>> {
         #[cfg(target_os = "macos")]
         {
             // Safari bookmarks are stored as a plist (usually binary format).
             // The `plist` crate reads both binary and XML plists directly —
             // no need to shell out to `plutil` first.
-            let bookmarks_plist = profile_path.join("Bookmarks.plist");
+            let bookmarks_plist = _profile_path.join("Bookmarks.plist");
             if !bookmarks_plist.exists() {
                 bail!("Safari Bookmarks.plist not found. Full Disk Access may be required.");
             }
@@ -62,11 +62,11 @@ impl BrowserAdapter for SafariAdapter {
         }
     }
 
-    fn read_history(&self, profile_path: &PathBuf, max_days: u32) -> Result<Vec<HistoryEntry>> {
+    fn read_history(&self, _profile_path: &PathBuf, _max_days: u32) -> Result<Vec<HistoryEntry>> {
         #[cfg(target_os = "macos")]
         {
             use rusqlite::{Connection, OpenFlags, params};
-            let history_db = profile_path.join("History.db");
+            let history_db = _profile_path.join("History.db");
             if !history_db.exists() {
                 bail!("Safari History.db not found. Full Disk Access required.");
             }
@@ -78,7 +78,7 @@ impl BrowserAdapter for SafariAdapter {
             let conn = Connection::open_with_flags(&tmp, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
 
             let cutoff = chrono::Utc::now()
-                - chrono::Duration::try_days(max_days as i64).unwrap_or_default();
+                - chrono::Duration::try_days(_max_days as i64).unwrap_or_default();
             // Safari uses CoreData timestamps: seconds since 2001-01-01
             let apple_epoch_offset: i64 = 978_307_200;
             let cutoff_apple = cutoff.timestamp() - apple_epoch_offset;
@@ -112,7 +112,6 @@ impl BrowserAdapter for SafariAdapter {
         #[cfg(not(target_os = "macos"))]
         bail!("Safari is only supported on macOS")
     }
-
     fn read_cookies(&self, _profile_path: &PathBuf) -> Result<Vec<CookieInfo>> {
         bail!("Safari cookie access requires Keychain entitlement and Full Disk Access. Not supported in this version.")
     }
