@@ -13,7 +13,7 @@ pub async fn read_history(
     profile_path: String,
     max_days: Option<u32>,
 ) -> Result<Vec<HistoryEntry>, String> {
-    use crate::adapters::*;
+    // Removed the warning-causing duplicate wild-card import `use crate::adapters::*;`
     let path = PathBuf::from(&profile_path);
     let days = max_days.unwrap_or(90);
 
