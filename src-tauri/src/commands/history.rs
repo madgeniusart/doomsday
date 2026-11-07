@@ -2,7 +2,8 @@ use crate::HistoryEntry;
 use crate::BrowserKind;
 use crate::adapters::{
     chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
-    brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
+    brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter,
+    BrowserAdapter // <--- ADD THIS LINE HERE
 };
 
 use std::path::PathBuf;
