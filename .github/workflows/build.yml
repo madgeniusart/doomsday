@@ -8,6 +8,8 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -81,7 +83,7 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Upload build artifact (manual runs)
-        if: github.event_name == 'workflow_dispatch'
+        if: always() && github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: universal-browser-sync-${{ matrix.name }}
