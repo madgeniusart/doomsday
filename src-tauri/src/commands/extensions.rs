@@ -1,5 +1,8 @@
-use crate::ExtensionInfo;
+// Bring the missing types into scope. 
+// If they are defined in a file like models.rs or types.rs, change this path to match (e.g., crate::models::ExtensionInfo)
+use crate::ExtensionInfo; 
 use crate::BrowserKind;
+
 use crate::adapters::{
     chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
     brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
@@ -20,7 +23,8 @@ pub async fn read_extensions(
     browser: BrowserKind,
     profile_path: String,
 ) -> Result<Vec<ExtensionInfo>, String> {
-    use crate::adapters::*;
+    // Removed the warning-causing wild-card import `use crate::adapters::*;` 
+    // since the adapter structs are already explicitly imported at the top of the file.
     let path = PathBuf::from(&profile_path);
 
     let result = match browser {
@@ -68,7 +72,6 @@ fn check_cross_browser_compatibility(
 
     match (source_chromium, dest_chromium) {
         (true, true) => {
-            // Same extension format; may be available on Chrome Web Store
             let store_url = Some(format!(
                 "https://chrome.google.com/webstore/detail/{}",
                 ext.id
@@ -76,7 +79,6 @@ fn check_cross_browser_compatibility(
             (store_url, Some("Extension should be compatible — install from Chrome Web Store".to_string()))
         }
         (true, false) if *dest == BrowserKind::Firefox => {
-            // Some Chrome extensions have Firefox equivalents; no automatic mapping
             (
                 Some(format!("https://addons.mozilla.org/en-US/firefox/search/?q={}", urlencoding::encode(&ext.name))),
                 Some("Chrome extensions are not directly compatible with Firefox. Search for an equivalent on Firefox Add-ons.".to_string()),
