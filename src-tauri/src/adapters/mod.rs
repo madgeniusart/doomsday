@@ -67,7 +67,6 @@ impl BrowserKind {
         )
     }
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstalledBrowser {
     pub kind: BrowserKind,
@@ -131,7 +130,6 @@ pub struct Bookmark {
     pub date_modified: Option<i64>,
     pub children: Vec<Bookmark>,
 }
-
 // ─── History types ────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
