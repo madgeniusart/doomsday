@@ -108,29 +108,19 @@ pub fn enumerate_chromium_profiles(user_data_dir: &PathBuf) -> Result<Vec<Browse
                 .and_then(Value::as_str)
                 .map(str::to_string);
 
-            let is_default = profile_dir == "Default";
+                      let is_default = profile_dir == "Default";
 
-profiles.push(BrowserProfile {
-    id: Uuid::new_v4().to_string(),
-    display_name,
-    path: profile_path,
-    avatar_icon: None,
-    is_default,
-    email,
-    last_used: None,
-});
             profiles.push(BrowserProfile {
                 id: Uuid::new_v4().to_string(),
                 display_name,
                 path: profile_path,
                 avatar_icon: None,
-                is_default: profile_dir == "Default",
+                is_default,
                 email,
                 last_used: None,
             });
         }
     }
-
     // Sort: Default first, then alphabetical
     profiles.sort_by(|a, b| {
         b.is_default
