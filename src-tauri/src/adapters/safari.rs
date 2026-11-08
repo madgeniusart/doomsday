@@ -8,7 +8,7 @@ use super::{
 };
 use anyhow::{bail, Result};
 use std::path::PathBuf;
-use uuid::Uuid;
+
 
 pub struct SafariAdapter;
 
