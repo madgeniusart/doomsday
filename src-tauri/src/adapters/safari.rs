@@ -1,4 +1,4 @@
-//! Safari adapter — macOS only.
+//! Safari adapter â€” macOS only.
 //! Access is limited by System Integrity Protection and Full Disk Access requirement.
 //! Users must grant Full Disk Access to the app in System Preferences.
 
@@ -9,9 +9,10 @@ use super::{
 use anyhow::{bail, Result};
 use std::path::PathBuf;
 
+#[cfg(target_os = "macos")]
+use uuid::Uuid;
 
 pub struct SafariAdapter;
-
 impl SafariAdapter {
     pub fn new() -> Self { SafariAdapter }
 }
@@ -42,7 +43,7 @@ impl BrowserAdapter for SafariAdapter {
         #[cfg(target_os = "macos")]
         {
             // Safari bookmarks are stored as a plist (usually binary format).
-            // The `plist` crate reads both binary and XML plists directly —
+            // The `plist` crate reads both binary and XML plists directly â€”
             // no need to shell out to `plutil` first.
             let bookmarks_plist = _profile_path.join("Bookmarks.plist");
             if !bookmarks_plist.exists() {
@@ -139,9 +140,9 @@ fn safari_data_dir() -> PathBuf {
 ///
 /// Safari's bookmark tree is a nested dictionary. Each node has a
 /// `WebBookmarkType` of either:
-///   - `WebBookmarkTypeLeaf`  — an individual bookmark (`URLString` + title)
-///   - `WebBookmarkTypeList`  — a folder (`Title` + `Children` array)
-///   - `WebBookmarkTypeProxy` — a dynamic/smart folder (e.g. Reading List),
+///   - `WebBookmarkTypeLeaf`  â€” an individual bookmark (`URLString` + title)
+///   - `WebBookmarkTypeList`  â€” a folder (`Title` + `Children` array)
+///   - `WebBookmarkTypeProxy` â€” a dynamic/smart folder (e.g. Reading List),
 ///     which has no real children to migrate and is skipped.
 #[cfg(target_os = "macos")]
 fn parse_safari_bookmark_node(node: &plist::Value, folder_path: &[String], out: &mut Vec<Bookmark>) {
@@ -199,7 +200,7 @@ fn parse_safari_bookmark_node(node: &plist::Value, folder_path: &[String], out: 
             }
         }
         "WebBookmarkTypeProxy" => {
-            // Smart folders (Reading List, etc.) — nothing to migrate.
+            // Smart folders (Reading List, etc.) â€” nothing to migrate.
         }
         _ => {
             // Root dictionary has no WebBookmarkType of its own; descend

@@ -108,7 +108,7 @@ pub fn enumerate_chromium_profiles(user_data_dir: &PathBuf) -> Result<Vec<Browse
                 .and_then(Value::as_str)
                 .map(str::to_string);
 
-                      let is_default = profile_dir == "Default";
+            let is_default = profile_dir == "Default";
 
             profiles.push(BrowserProfile {
                 id: Uuid::new_v4().to_string(),
@@ -380,7 +380,7 @@ fn insert_chromium_bookmark_node(
 }
 
 /// Read browsing history from Chromium's History SQLite database.
-/// Opens in read-only mode — NEVER modifies source data.
+/// Opens in read-only mode â€” NEVER modifies source data.
 pub fn read_chromium_history(
     profile_path: &PathBuf,
     max_days: u32,
