@@ -208,6 +208,7 @@ export type MigrationStatusKind =
   | "pending"
   | "running"
   | "completed"
+  | "partial"
   | "failed"
   | "cancelled";
 
@@ -215,7 +216,7 @@ export interface MigrationItemResult {
   category: string;
   item_key: string;
   label: string;
-  status: "migrated" | "failed" | "skipped" | "incompatible";
+  status: "migrated" | "exported" | "planned" | "failed" | "skipped" | "incompatible";
   message?: string;
 }
 

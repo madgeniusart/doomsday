@@ -18,6 +18,20 @@ use std::path::PathBuf;
 pub struct BrowserDetector;
 
 impl BrowserDetector {
+    /// Best-effort process check used before writing native profile databases.
+    /// A false result is not a guarantee that another OS user has no browser open.
+    pub fn is_running(kind: &BrowserKind) -> bool {
+        let names: &[&str] = match kind {
+            BrowserKind::Chrome => &["chrome", "Google Chrome"],
+            BrowserKind::Firefox => &["firefox", "Firefox"],
+            BrowserKind::Edge => &["msedge", "Microsoft Edge"],
+            BrowserKind::Brave => &["brave", "Brave Browser"],
+            BrowserKind::Opera => &["opera", "Opera"],
+            BrowserKind::Safari => &["Safari"],
+        };
+        names.iter().any(|name| is_process_running(name))
+    }
+
     pub fn detect_all() -> Vec<InstalledBrowser> {
         let kinds = [
             BrowserKind::Chrome,
@@ -45,7 +59,7 @@ impl BrowserDetector {
                         Ok(Some(InstalledBrowser {
                             kind: kind.clone(),
                             display_name: kind.display_name().to_string(),
-                            version: executable.as_ref().and_then(|e| get_version(e)),
+                            version: None,
                             executable_path: executable,
                             profiles,
                             is_running: is_process_running("chrome") || is_process_running("Google Chrome"),
@@ -65,7 +79,7 @@ impl BrowserDetector {
                         Ok(Some(InstalledBrowser {
                             kind: kind.clone(),
                             display_name: kind.display_name().to_string(),
-                            version: executable.as_ref().and_then(|e| get_version(e)),
+                            version: None,
                             executable_path: executable,
                             profiles,
                             is_running: is_process_running("firefox"),
@@ -255,17 +269,6 @@ fn which(name: &str) -> Option<PathBuf> {
         }
     }
     None
-}
-
-/// Get version from binary --version output
-fn get_version(exe: &PathBuf) -> Option<String> {
-    std::process::Command::new(exe)
-        .arg("--version")
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
 }
 
 /// Check if a browser process is running (best-effort)

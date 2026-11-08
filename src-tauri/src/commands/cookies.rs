@@ -1,6 +1,6 @@
 use crate::{BrowserKind, CookieInfo};
 use crate::adapters::{
-    chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter, 
+    chrome::ChromeAdapter, firefox::FirefoxAdapter, edge::EdgeAdapter,
     brave::BraveAdapter, opera::OperaAdapter, safari::SafariAdapter
 };
 
@@ -58,5 +58,8 @@ pub async fn export_cookies(
     let json = serde_json::to_string_pretty(&filtered).map_err(|e| e.to_string())?;
     std::fs::write(&output_path, json).map_err(|e| e.to_string())?;
 
-    Ok(format!("Exported {} cookies", filtered.len()))
+    Ok(format!(
+        "Exported metadata for {} cookies; cookie values and active sessions were not exported",
+        filtered.len()
+    ))
 }

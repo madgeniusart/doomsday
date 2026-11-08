@@ -5,6 +5,7 @@ import {
   SkipForward,
   AlertTriangle,
   Download,
+  FileDown,
   RotateCcw,
 } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
@@ -14,12 +15,16 @@ import type { MigrationItemResult } from "@/types";
 
 const STATUS_ICONS: Record<string, ElementType> = {
   migrated: CheckCircle2,
+  exported: FileDown,
+  planned: FileDown,
   failed: XCircle,
   skipped: SkipForward,
   incompatible: AlertTriangle,
 };
 const STATUS_COLORS: Record<string, string> = {
   migrated: "text-green-400",
+  exported: "text-sky-400",
+  planned: "text-slate-400",
   failed: "text-red-400",
   skipped: "text-amber-400",
   incompatible: "text-amber-400",
@@ -43,6 +48,8 @@ export function MigrationReport() {
 
   const counts = {
     migrated: report.filter((r) => r.status === "migrated").length,
+    exported: report.filter((r) => r.status === "exported").length,
+    planned: report.filter((r) => r.status === "planned").length,
     failed: report.filter((r) => r.status === "failed").length,
     skipped: report.filter((r) => r.status === "skipped").length,
     incompatible: report.filter((r) => r.status === "incompatible").length,
@@ -73,10 +80,12 @@ export function MigrationReport() {
   return (
     <div className="space-y-6">
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {(
           [
             { key: "migrated", label: "Migrated", color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
+            { key: "exported", label: "Exported", color: "text-sky-400", bg: "bg-sky-500/10 border-sky-500/20" },
+            { key: "planned", label: "Planned", color: "text-slate-400", bg: "bg-surface-700 border-white/8" },
             { key: "failed", label: "Failed", color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
             { key: "skipped", label: "Skipped", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
             { key: "incompatible", label: "Incompatible", color: "text-slate-400", bg: "bg-surface-700 border-white/8" },
@@ -100,7 +109,7 @@ export function MigrationReport() {
       {/* Filter chips */}
       <div className="flex items-center gap-2">
         <span className="text-xs text-slate-500">Filter:</span>
-        {["all", "migrated", "failed", "skipped", "incompatible"].map((f) => (
+        {["all", "migrated", "exported", "planned", "failed", "skipped", "incompatible"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -159,7 +168,12 @@ export function MigrationReport() {
         </button>
         {status === "completed" && (
           <p className="text-xs text-slate-500">
-            ✓ Files exported to destination profile folder
+            ✓ Export files created in the selected destination profile folder. Importable files still need to be imported by the browser.
+          </p>
+        )}
+        {status === "partial" && (
+          <p className="text-xs text-amber-400">
+            Some categories failed. Review failed items and warnings above.
           </p>
         )}
       </div>

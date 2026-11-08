@@ -8,6 +8,7 @@ dist-ssr/
 
 # Tauri / Rust build artifacts
 src-tauri/target/
+native-host/target/
 # NOTE: Cargo.lock IS committed for this binary application (not ignored).
 # See: https://doc.rust-lang.org/cargo/faq.html#why-do-binaries-have-cargolock-in-version-control
 

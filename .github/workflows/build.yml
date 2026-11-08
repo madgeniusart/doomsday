@@ -8,8 +8,6 @@ on:
 
 jobs:
   build:
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +46,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -58,11 +55,16 @@ jobs:
       - name: Cache Rust build
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: "./src-tauri -> target"
+          workspaces: |
+            ./src-tauri -> target
+            ./native-host -> target
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+
+      - name: Build native messaging host
+        run: cargo build --manifest-path native-host/Cargo.toml --release ${{ matrix.args }}
 
       - name: Type-check frontend
         run: npx tsc --noEmit
@@ -83,10 +85,18 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Upload build artifact (manual runs)
-        if: always() && github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: universal-browser-sync-${{ matrix.name }}
           path: |
             src-tauri/target/**/release/bundle/**/*
           if-no-files-found: ignore
+
+      - name: Upload native messaging host (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubs-native-host-${{ matrix.name }}
+          path: native-host/target/**/release/ubs-native-host*
+          if-no-files-found: error

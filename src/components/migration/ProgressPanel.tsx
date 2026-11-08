@@ -1,4 +1,4 @@
-import { XCircle, CheckCircle2, AlertCircle, Ban } from "lucide-react";
+import { XCircle, CheckCircle2, AlertCircle, Ban, AlertTriangle } from "lucide-react";
 import { Spinner, ProgressBar, Alert } from "@/components/ui/index";
 import { useAppStore } from "@/store/appStore";
 import { pluralize } from "@/utils";
@@ -23,7 +23,7 @@ export function ProgressPanel() {
     activeStatus;
 
   const isActive = status === "running" || status === "pending";
-  const isDone = status === "completed" || status === "failed" || status === "cancelled";
+  const isDone = status === "completed" || status === "partial" || status === "failed" || status === "cancelled";
 
   return (
     <div className="space-y-6">
@@ -32,6 +32,9 @@ export function ProgressPanel() {
         {isActive && <Spinner size="md" />}
         {status === "completed" && (
           <CheckCircle2 className="w-6 h-6 text-green-400" />
+        )}
+        {status === "partial" && (
+          <AlertTriangle className="w-6 h-6 text-amber-400" />
         )}
         {status === "failed" && (
           <XCircle className="w-6 h-6 text-red-400" />
@@ -48,6 +51,8 @@ export function ProgressPanel() {
               ? "Starting…"
               : status === "completed"
               ? "Migration complete"
+              : status === "partial"
+              ? "Migration completed with errors"
               : status === "failed"
               ? "Migration failed"
               : "Migration cancelled"}
@@ -88,10 +93,11 @@ export function ProgressPanel() {
       )}
 
       {/* Dry run note */}
-      {isDone && status === "completed" && (
-        <Alert type="info">
-          Migration complete. Check the report on the next screen for per-item
-          details.
+      {isDone && (status === "completed" || status === "partial") && (
+        <Alert type={status === "partial" ? "warning" : "info"}>
+          {status === "partial"
+            ? "Some categories could not be migrated. Review the report before using the destination profile."
+            : "Migration complete. Check the report on the next screen for per-item details."}
         </Alert>
       )}
     </div>

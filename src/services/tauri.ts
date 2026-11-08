@@ -144,3 +144,22 @@ export const getSettings = (): Promise<AppSettings> =>
 
 export const saveSettings = (settings: AppSettings): Promise<void> =>
   invoke("save_settings", { settings });
+
+// ─── Secure credential import / companion bridge ────────────────────────────
+export interface PasswordImportResult {
+  imported: number;
+  skipped: number;
+  encrypted_file: string;
+}
+
+export const importPasswordCsv = (csvPath: string): Promise<PasswordImportResult> =>
+  invoke("import_password_csv", { csvPath });
+
+export const listPasswordImports = (): Promise<Array<{ file: string; created_at: string; encrypted: boolean }>> =>
+  invoke("list_password_imports");
+
+export const drainExtensionEvents = (): Promise<Array<{ received_at: string; event: Record<string, unknown> }>> =>
+  invoke("drain_extension_events");
+
+export const exportPasswordCsv = (outputPath: string): Promise<number> =>
+  invoke("export_password_csv", { outputPath });

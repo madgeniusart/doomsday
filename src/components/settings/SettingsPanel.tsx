@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Save, Moon, Sun, Shield, Clock, Database } from "lucide-react";
+import { Save, Moon, Sun, Shield, Clock, Database, KeyRound, Link2, FileUp } from "lucide-react";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { drainExtensionEvents, exportPasswordCsv, importPasswordCsv } from "@/services/tauri";
 import { useAppStore } from "@/store/appStore";
 import { Spinner, SectionHeader, Alert } from "@/components/ui/index";
 import type { AppSettings } from "@/types";
@@ -16,6 +18,9 @@ export function SettingsPanel() {
 
   const [local, setLocal] = useState<AppSettings>(settings);
   const [saving, setSaving] = useState(false);
+  const [credentialStatus, setCredentialStatus] = useState("");
+  const [bridgeStatus, setBridgeStatus] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -158,6 +163,80 @@ export function SettingsPanel() {
               Only history entries within this window will be exported.
             </p>
           </div>
+        </div>
+
+
+        {/* Password CSV import */}
+        <div className="card p-5">
+          <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-brand-400" />
+            Password migration (encrypted staging)
+          </h3>
+          <p className="text-xs text-slate-400 mb-3">
+            Import a CSV exported by your browser&apos;s password manager. UBS encrypts it immediately
+            with the OS-keychain-backed key. It does not extract passwords directly from browser
+            profile databases or silently inject them into another browser.
+          </p>
+          <button
+            className="btn-secondary flex items-center gap-2"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true); setCredentialStatus("");
+              try {
+                const selected = await open({ multiple: false, filters: [{ name: "CSV password export", extensions: ["csv"] }] });
+                if (typeof selected !== "string") return;
+                const result = await importPasswordCsv(selected);
+                setCredentialStatus(`Encrypted ${result.imported} login(s); skipped ${result.skipped} invalid or duplicate row(s).`);
+              } catch (error) {
+                setCredentialStatus(`Import failed: ${String(error)}`);
+              } finally { setBusy(false); }
+            }}
+          >
+            {busy ? <Spinner size="sm" /> : <FileUp className="w-4 h-4" />}
+            Import browser password CSV
+          </button>
+          <button
+            className="btn-secondary mt-2 flex items-center gap-2"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true); setCredentialStatus("");
+              try {
+                const output = await save({ defaultPath: "ubs-passwords-for-browser-import.csv", filters: [{ name: "CSV", extensions: ["csv"] }] });
+                if (!output) return;
+                const count = await exportPasswordCsv(output);
+                setCredentialStatus(`Exported ${count} login(s) to the selected CSV. Import it using the destination browser's password manager.`);
+              } catch (error) { setCredentialStatus(`Export failed: ${String(error)}`); }
+              finally { setBusy(false); }
+            }}
+          >Export encrypted vault to browser CSV</button>
+          {credentialStatus && <p className="text-xs text-slate-300 mt-3 break-words">{credentialStatus}</p>}
+          <p className="text-[11px] text-amber-300/80 mt-3">
+            To use these passwords in the destination browser, use its built-in password-manager
+            import flow. The exported CSV is plaintext and contains passwords. Import it immediately into the destination browser, then securely delete the CSV.
+          </p>
+        </div>
+
+        {/* Native messaging bridge */}
+        <div className="card p-5">
+          <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+            <Link2 className="w-4 h-4 text-brand-400" />
+            Companion extension bridge
+          </h3>
+          <p className="text-xs text-slate-400 mb-3">
+            The native host relays extension connection and aggregate profile-count events to UBS.
+            It never accepts password, cookie-value, or authentication-session data.
+          </p>
+          <button
+            className="btn-secondary"
+            onClick={async () => {
+              try {
+                const events = await drainExtensionEvents();
+                setBridgeStatus(events.length ? `Received ${events.length} companion event(s). Latest: ${String(events[events.length - 1]?.event?.type || "event")}.` : "No pending extension events. Open the UBS Helper popup after installing the native host.");
+              } catch (error) { setBridgeStatus(`Bridge check failed: ${String(error)}`); }
+            }}
+          >Check companion connection</button>
+          {bridgeStatus && <p className="text-xs text-slate-300 mt-3">{bridgeStatus}</p>}
+          <p className="text-[11px] text-slate-500 mt-2">Installation instructions: browser-extension/native-host/README.md</p>
         </div>
 
         {/* Data */}

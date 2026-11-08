@@ -1,111 +1,101 @@
-/**
- * Universal Browser Sync Extension — Popup Script
- * Shows cookie metadata for the current tab.
- */
+/** User-initiated, metadata-only cookie inspector. */
+
+async function sendBackground(message) {
+  return chrome.runtime.sendMessage(message);
+}
 
 async function init() {
   const main = document.getElementById("main");
-
-  // Get active tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) {
-    main.innerHTML = '<div class="loading">No active tab.</div>';
+  if (!tab?.id || !tab.url) {
+    main.textContent = "No inspectable active tab.";
     return;
   }
 
-  let url;
+  let pageUrl;
   try {
-    url = new URL(tab.url);
+    pageUrl = new URL(tab.url);
   } catch {
-    main.innerHTML = '<div class="loading">Cannot inspect this page.</div>';
+    main.textContent = "Cannot inspect this page.";
+    return;
+  }
+  if (!["http:", "https:"].includes(pageUrl.protocol)) {
+    main.textContent = "Only ordinary HTTP and HTTPS pages can be inspected.";
     return;
   }
 
-  // Protected pages
-  if (url.protocol === "chrome:" || url.protocol === "about:") {
-    main.innerHTML = '<div class="loading">Cannot inspect browser pages.</div>';
+  const originPattern = `${pageUrl.protocol}//${pageUrl.hostname}/*`;
+  const hasPermission = await chrome.permissions.contains({ origins: [originPattern] });
+  if (!hasPermission) {
+    main.innerHTML = `
+      <div class="section-title">Site permission required</div>
+      <div class="notice">UBS can inspect cookie <strong>metadata only</strong> for this site. Cookie values, passwords, and page storage are never collected.</div>
+      <div class="site-name">${escHtml(pageUrl.hostname)}</div>
+      <button class="btn" id="grant-site">Allow for this site</button>
+      <div class="fine-print">You can revoke this permission in your browser's extension settings.</div>
+    `;
+    document.getElementById("grant-site")?.addEventListener("click", async () => {
+      const granted = await chrome.permissions.request({ origins: [originPattern] });
+      if (granted) init();
+      else showError("Permission was not granted.");
+    });
     return;
   }
 
-  // Request cookies from background
-  const cookies = await new Promise((resolve) => {
-    chrome.runtime.sendMessage(
-      { action: "GET_COOKIES", tabId: tab.id },
-      (resp) => resolve(resp ?? [])
-    );
-  });
+  main.innerHTML = '<div class="loading">Reading cookie metadata…</div>';
+  const response = await sendBackground({ action: "GET_COOKIE_METADATA", tabId: tab.id });
+  if (!response?.ok) {
+    showError(response?.error || "Could not inspect this page.");
+    return;
+  }
+  renderCookies(main, pageUrl.hostname, response.cookies || [], originPattern);
+  const bridge = await sendBackground({ action: "GET_BRIDGE_STATUS" }).catch(() => ({ status: "unknown" }));
+  const bridgeLine = document.createElement("div");
+  bridgeLine.className = "notice";
+  bridgeLine.textContent = `Desktop bridge: ${bridge?.status || "unknown"}`;
+  main.appendChild(bridgeLine);
+}
 
+function renderCookies(main, hostname, cookies, originPattern) {
   const total = cookies.length;
-  const authCount = cookies.filter((c) => c.is_auth_likely).length;
-  const sessionCount = cookies.filter((c) => c.is_session).length;
-  const secureCount = cookies.filter((c) => c.secure).length;
-
+  const authCount = cookies.filter((cookie) => cookie.is_auth_likely).length;
+  const sessionCount = cookies.filter((cookie) => cookie.is_session).length;
+  const secureCount = cookies.filter((cookie) => cookie.secure).length;
   main.innerHTML = `
-    <div class="section-title">Current Page</div>
-    <div style="font-size:11px; color:var(--muted); margin-bottom:8px; word-break:break-all;">${url.hostname}</div>
-
-    <div class="section-title">Cookie Summary</div>
-    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:0 8px; margin-bottom:4px;">
-      <div class="stat-row">
-        <span class="stat-label">Total cookies</span>
-        <span class="stat-value">${total}</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Auth / session</span>
-        <span class="stat-value">
-          <span class="badge badge-amber">${authCount} auth</span>
-        </span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Session-only</span>
-        <span class="stat-value">${sessionCount}</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Secure flag</span>
-        <span class="stat-value">
-          <span class="badge ${secureCount === total && total > 0 ? "badge-green" : "badge-amber"}">${secureCount}/${total}</span>
-        </span>
-      </div>
+    <div class="section-title">Current site</div>
+    <div class="site-name">${escHtml(hostname)}</div>
+    <div class="section-title">Cookie metadata</div>
+    <div class="summary">
+      <div class="stat-row"><span class="stat-label">Total cookies</span><span class="stat-value">${total}</span></div>
+      <div class="stat-row"><span class="stat-label">Likely authentication</span><span class="stat-value">${authCount}</span></div>
+      <div class="stat-row"><span class="stat-label">Session-only</span><span class="stat-value">${sessionCount}</span></div>
+      <div class="stat-row"><span class="stat-label">Secure</span><span class="stat-value">${secureCount}/${total}</span></div>
     </div>
-
-    ${total > 0 ? `
-    <div class="section-title">Cookies (${Math.min(total, 20)} of ${total})</div>
-    <div id="cookie-list">
-      ${cookies.slice(0, 20).map((c) => `
+    ${total ? `
+      <div class="section-title">Cookie names (${Math.min(total, 20)} of ${total})</div>
+      <div id="cookie-list">${cookies.slice(0, 20).map((cookie) => `
         <div class="cookie-row">
-          <div style="flex:1; min-width:0;">
-            <div class="cookie-name">${escHtml(c.name)}</div>
-            <div class="cookie-domain">${escHtml(c.domain)}</div>
-          </div>
-          <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
-            ${c.is_auth_likely ? '<span class="badge badge-amber">auth</span>' : ""}
-            ${c.secure ? '<span class="badge badge-green">sec</span>' : ""}
-            ${c.is_session ? '<span class="badge" style="background:rgba(148,163,184,.1);color:var(--muted)">sess</span>' : ""}
-          </div>
-        </div>
-      `).join("")}
-    </div>
-    ` : '<div style="color:var(--muted);text-align:center;padding:12px 0;font-size:12px;">No cookies found for this page.</div>'}
-
-    <button class="btn" id="open-app">Open Universal Browser Sync ↗</button>
+          <div class="cookie-info"><div class="cookie-name">${escHtml(cookie.name)}</div><div class="cookie-domain">${escHtml(cookie.domain)}</div></div>
+          <div class="flags">${cookie.is_auth_likely ? '<span class="badge badge-amber">auth</span>' : ""}${cookie.secure ? '<span class="badge badge-green">secure</span>' : ""}${cookie.is_session ? '<span class="badge">session</span>' : ""}</div>
+        </div>`).join("")}</div>
+    ` : '<div class="empty">No cookies found for this site.</div>'}
+    <div class="notice">This helper never reads or exports cookie values. Authentication sessions cannot be transferred by this metadata view.</div>
+    <button class="btn secondary" id="revoke-site">Revoke this site permission</button>
   `;
-
-  document.getElementById("open-app")?.addEventListener("click", () => {
-    // Attempt to open the desktop app via a custom URI scheme
-    // The Tauri app registers ubs:// on install
-    window.open("ubs://open", "_blank");
+  document.getElementById("revoke-site")?.addEventListener("click", async () => {
+    await chrome.permissions.remove({ origins: [originPattern] }).catch(() => {});
+    init();
   });
 }
 
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function showError(message) {
+  const main = document.getElementById("main");
+  main.innerHTML = `<div class="error">${escHtml(message)}</div><button class="btn secondary" id="retry">Retry</button>`;
+  document.getElementById("retry")?.addEventListener("click", init);
 }
 
-init().catch((e) => {
-  document.getElementById("main").innerHTML =
-    `<div class="loading" style="color:#ef4444;">Error: ${e.message}</div>`;
-});
+function escHtml(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+init().catch((error) => showError(error?.message || "Unexpected extension error."));

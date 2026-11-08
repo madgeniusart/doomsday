@@ -195,6 +195,8 @@ export function Dashboard() {
                       ? "bg-green-400"
                       : run.status === "failed"
                       ? "bg-red-400"
+                      : run.status === "partial"
+                      ? "bg-amber-400"
                       : "bg-amber-400"
                   }`}
                 />

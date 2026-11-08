@@ -65,6 +65,9 @@ export function RiskBadge({ level }: { level: string }) {
 export function StatusBadge({ status }: { status: string }) {
   const map: Record<string, BadgeVariant> = {
     migrated: "success",
+    exported: "brand",
+    planned: "muted",
+    partial: "warning",
     completed: "success",
     failed: "error",
     skipped: "warning",

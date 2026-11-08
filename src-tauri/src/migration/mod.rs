@@ -42,18 +42,23 @@ pub fn analyze_compatibility(
     let dest_chromium = dest.is_chromium_based();
 
     // Bookmarks
+    let bookmark_notes = if dest_chromium {
+        "Imported into the destination Chromium bookmark database after the browser is closed; a timestamped backup is created first."
+    } else {
+        "Exported as Netscape HTML into the destination profile; use the destination browser's Import Bookmarks command to finish."
+    };
     categories.push(CategoryCompatibility {
         category: DataCategory::Bookmarks,
         supported: true,
-        notes: Some("Exported as Netscape HTML — importable by all browsers".to_string()),
+        notes: Some(bookmark_notes.to_string()),
         risk_level: RiskLevel::Safe,
     });
 
     // History
     let history_notes = if source_chromium && dest_chromium {
-        "History exported as JSON reference. Direct import not available without browser restart."
+        "History exported as a JSON reference; it is not imported into the destination browser."
     } else {
-        "History format differs. Exported as JSON reference."
+        "History format differs. A JSON reference export is created; native import is not implemented."
     };
     categories.push(CategoryCompatibility {
         category: DataCategory::History,
@@ -66,7 +71,7 @@ pub fn analyze_compatibility(
     categories.push(CategoryCompatibility {
         category: DataCategory::Cookies,
         supported: !matches!(dest, BrowserKind::Safari),
-        notes: Some("Authentication cookies skipped. Re-login required on affected sites.".to_string()),
+        notes: Some("Cookie metadata can be inventoried and exported, but cookie values and active authentication sessions are not transferred. Some sites may require sign-in again.".to_string()),
         risk_level: RiskLevel::Medium,
     });
 
@@ -76,9 +81,9 @@ pub fn analyze_compatibility(
         category: DataCategory::Extensions,
         supported: true,
         notes: if ext_compatible {
-            Some("Extension IDs listed — install from Chrome Web Store".to_string())
+            Some("Extension details are listed for manual installation; extensions are not installed automatically.".to_string())
         } else {
-            Some("Extension format incompatible — search for equivalents".to_string())
+            Some("Extension format differs; equivalent extensions may need to be installed manually.".to_string())
         },
         risk_level: if ext_compatible { RiskLevel::Low } else { RiskLevel::Medium },
     });
@@ -87,7 +92,7 @@ pub fn analyze_compatibility(
     categories.push(CategoryCompatibility {
         category: DataCategory::Preferences,
         supported: true,
-        notes: Some("Preferences exported as JSON reference. Settings must be configured manually in destination browser.".to_string()),
+        notes: Some("Preferences are exported as a reference file; settings are not applied automatically to the destination browser.".to_string()),
         risk_level: RiskLevel::Low,
     });
 

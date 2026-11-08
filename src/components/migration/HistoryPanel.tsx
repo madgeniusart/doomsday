@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { History, CheckCircle2, XCircle, Ban, Loader } from "lucide-react";
+import { History, CheckCircle2, XCircle, Ban, Loader, AlertTriangle } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import { Empty, Spinner, SectionHeader, StatusBadge } from "@/components/ui/index";
 import { formatRelativeTime, formatDateTime, pluralize } from "@/utils";
@@ -61,6 +61,8 @@ export function HistoryPanel() {
                   <div className="mt-0.5">
                     {run.status === "completed" ? (
                       <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    ) : run.status === "partial" ? (
+                      <AlertTriangle className="w-5 h-5 text-amber-400" />
                     ) : run.status === "failed" ? (
                       <XCircle className="w-5 h-5 text-red-400" />
                     ) : run.status === "cancelled" ? (

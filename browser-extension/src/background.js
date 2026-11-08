@@ -1,123 +1,120 @@
 /**
- * Universal Browser Sync — Extension Background Service Worker
- *
- * Provides cookie metadata, tab info, and local storage snapshots
- * to the desktop application via the native messaging API.
- *
- * SECURITY: Cookie *values* for auth cookies are never exposed.
- * Only metadata (domain, name, flags, expiry) is transmitted.
+ * Universal Browser Sync — extension service worker.
+ * Cookie values and web-storage contents are never collected or transmitted.
+ * Site access is optional and must be granted by the user for each origin.
  */
 
 const AUTH_COOKIE_PATTERNS = [
-  "session", "sess", "auth", "token", "jwt", "login",
-  "sid", "user_id", "userid", "account", "csrftoken",
-  "xsrf", "access_token", "refresh_token", "id_token",
+  "session", "sess", "auth", "token", "jwt", "login", "sid",
+  "user_id", "userid", "account", "csrftoken", "xsrf",
+  "access_token", "refresh_token", "id_token",
 ];
 
 function isAuthCookie(name) {
-  const lower = name.toLowerCase();
-  return AUTH_COOKIE_PATTERNS.some((p) => lower.includes(p));
+  const lower = String(name || "").toLowerCase();
+  return AUTH_COOKIE_PATTERNS.some((pattern) => lower.includes(pattern));
 }
 
-/**
- * Get cookie metadata for the current active tab.
- * Returns sanitised CookieInfo objects (no values for auth cookies).
- */
-async function getTabCookies(tabId) {
-  const [tab] = await chrome.tabs.query({ id: tabId });
-  if (!tab?.url) return [];
+function toMetadata(cookie) {
+  return {
+    domain: cookie.domain,
+    name: cookie.name,
+    path: cookie.path,
+    secure: Boolean(cookie.secure),
+    http_only: Boolean(cookie.httpOnly),
+    same_site: cookie.sameSite ?? "unspecified",
+    expires: cookie.expirationDate ? Math.floor(cookie.expirationDate) : null,
+    is_session: Boolean(cookie.session),
+    is_auth_likely: isAuthCookie(cookie.name),
+  };
+}
 
+async function getTabCookieMetadata(tabId) {
+  const tab = await chrome.tabs.get(tabId);
+  if (!tab?.url) throw new Error("The active tab has no inspectable URL.");
   const url = new URL(tab.url);
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("Only ordinary HTTP and HTTPS pages can be inspected.");
+  }
+  const origin = `${url.protocol}//${url.hostname}/*`;
+  const permitted = await chrome.permissions.contains({ origins: [origin] });
+  if (!permitted) throw new Error("Site permission has not been granted.");
   const cookies = await chrome.cookies.getAll({ domain: url.hostname });
-
-  return cookies.map((c) => ({
-    domain: c.domain,
-    name: c.name,
-    path: c.path,
-    secure: c.secure,
-    http_only: c.httpOnly,
-    same_site: c.sameSite ?? "unspecified",
-    expires: c.expirationDate ? Math.floor(c.expirationDate) : null,
-    is_session: c.session,
-    is_auth_likely: isAuthCookie(c.name),
-    // Value deliberately excluded for auth-likely cookies
-    value: isAuthCookie(c.name) ? "[REDACTED]" : c.value,
-  }));
+  return cookies.map(toMetadata);
 }
 
-/**
- * Collect localStorage / sessionStorage snapshot from a tab via content script.
- */
-async function getTabStorage(tabId) {
-  try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        const local = {};
-        const session = {};
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          local[k] = localStorage.getItem(k);
-        }
-        for (let i = 0; i < sessionStorage.length; i++) {
-          const k = sessionStorage.key(i);
-          session[k] = sessionStorage.getItem(k);
-        }
-        return { local, session };
-      },
-    });
-    return results?.[0]?.result ?? { local: {}, session: {} };
-  } catch {
-    return { local: {}, session: {} };
-  }
-}
-
-// ── Message handler from popup / desktop app ─────────────────────────────────
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  const { action, tabId } = message;
-
-  if (action === "GET_COOKIES") {
-    getTabCookies(tabId).then(sendResponse).catch((e) =>
-      sendResponse({ error: e.message })
-    );
-    return true; // async
-  }
-
-  if (action === "GET_STORAGE") {
-    getTabStorage(tabId).then(sendResponse).catch((e) =>
-      sendResponse({ error: e.message })
-    );
-    return true;
-  }
-
-  if (action === "GET_ALL_COOKIES") {
-    chrome.cookies.getAll({}).then((cookies) => {
-      const metadata = cookies.map((c) => ({
-        domain: c.domain,
-        name: c.name,
-        path: c.path,
-        secure: c.secure,
-        http_only: c.httpOnly,
-        same_site: c.sameSite ?? "unspecified",
-        expires: c.expirationDate ? Math.floor(c.expirationDate) : null,
-        is_session: c.session,
-        is_auth_likely: isAuthCookie(c.name),
-      }));
-      sendResponse(metadata);
-    });
-    return true;
-  }
-
-  if (action === "PING") {
-    sendResponse({ status: "ok", version: "1.0.0" });
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.action === "PING") {
+    sendResponse({ status: "ok", version: "1.1.0", mode: "metadata_only" });
     return false;
   }
+  if (message?.action === "GET_COOKIE_METADATA") {
+    getTabCookieMetadata(message.tabId)
+      .then((cookies) => sendResponse({ ok: true, cookies }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+  return false;
 });
 
-// Extension installed / updated handler
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === "install") {
-    console.log("[UBS] Extension installed — Universal Browser Sync Helper ready.");
+    console.info("[UBS] Helper installed. Site access is requested only when you choose to inspect a page.");
   }
 });
+
+// Native-messaging bridge: only health and aggregate profile counts are sent.
+// Passwords, cookie values, browsing URLs, and authentication tokens are never sent.
+const NATIVE_HOST = "com.universal-browser-sync.bridge";
+let nativePort = null;
+let bridgeStatus = "not_installed";
+
+function connectNativeBridge() {
+  try {
+    nativePort = chrome.runtime.connectNative(NATIVE_HOST);
+    nativePort.onMessage.addListener((message) => {
+      bridgeStatus = message?.ok ? "connected" : "error";
+      chrome.storage.local.set({ ubsBridgeStatus: bridgeStatus, ubsBridgeInfo: message || null });
+    });
+    nativePort.onDisconnect.addListener(() => {
+      const error = chrome.runtime.lastError?.message || "Native host unavailable";
+      bridgeStatus = "disconnected";
+      nativePort = null;
+      chrome.storage.local.set({ ubsBridgeStatus: bridgeStatus, ubsBridgeError: error });
+    });
+    nativePort.postMessage({ action: "PING" });
+  } catch (error) {
+    bridgeStatus = "not_installed";
+    chrome.storage.local.set({ ubsBridgeStatus: bridgeStatus, ubsBridgeError: String(error) });
+  }
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.action === "GET_BRIDGE_STATUS") {
+    chrome.storage.local.get(["ubsBridgeStatus", "ubsBridgeError"], (result) => {
+      sendResponse({ status: result.ubsBridgeStatus || bridgeStatus, error: result.ubsBridgeError || null });
+    });
+    return true;
+  }
+  if (message?.action === "SEND_PROFILE_SUMMARY") {
+    if (!nativePort) {
+      sendResponse({ ok: false, error: "Native bridge is not connected" });
+      return false;
+    }
+    nativePort.postMessage({
+      action: "PROFILE_SUMMARY",
+      browser: message.browser,
+      profileName: message.profileName,
+      counts: {
+        bookmarks: Number(message.counts?.bookmarks || 0),
+        history: Number(message.counts?.history || 0),
+        extensions: Number(message.counts?.extensions || 0),
+      },
+    });
+    sendResponse({ ok: true });
+    return false;
+  }
+  return false;
+});
+
+connectNativeBridge();

@@ -11,6 +11,7 @@ pub use database::AppDatabase;
 
 /// Application state shared across Tauri commands
 pub struct AppState {
+    pub app_data_dir: std::path::PathBuf,
     pub db: std::sync::Mutex<AppDatabase>,
     pub encryption: std::sync::Mutex<encryption::EncryptionService>,
 }
@@ -38,6 +39,7 @@ pub fn run() {
                 .expect("failed to initialize encryption service");
 
             app.manage(AppState {
+                app_data_dir: app_dir.clone(),
                 db: std::sync::Mutex::new(db),
                 encryption: std::sync::Mutex::new(enc),
             });
@@ -75,6 +77,10 @@ pub fn run() {
             // Settings
             commands::settings::get_settings,
             commands::settings::save_settings,
+            commands::credentials::import_password_csv,
+            commands::credentials::list_password_imports,
+            commands::credentials::export_password_csv,
+            commands::bridge::drain_extension_events,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

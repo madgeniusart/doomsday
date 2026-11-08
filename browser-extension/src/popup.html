@@ -77,19 +77,28 @@
         transition: background 0.15s;
       }
       .btn:hover { background: #2563eb; }
+      .btn.secondary { background: var(--bg2); border: 1px solid var(--border); color: var(--text); }
+      .btn.secondary:hover { background: #334155; }
+      .notice { color: var(--muted); font-size: 11px; line-height: 1.5; padding: 9px; border: 1px solid var(--border); border-radius: 8px; margin: 8px 0; }
+      .site-name { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; margin: 6px 0 10px; }
+      .fine-print, .empty { color: var(--muted); font-size: 10px; line-height: 1.5; text-align: center; margin-top: 8px; }
+      .summary { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 0 8px; }
+      .cookie-info { flex: 1; min-width: 0; }
+      .flags { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+      .error { color: var(--red); padding: 12px 0; line-height: 1.5; }
       .loading { text-align: center; padding: 24px; color: var(--muted); }
       #cookie-list {
         max-height: 140px; overflow-y: auto;
         border: 1px solid var(--border); border-radius: 6px;
       }
       .cookie-row {
-        display: flex; align-items: center; gap-8px;
+        display: flex; align-items: center; gap: 8px;
         padding: 5px 8px;
         border-bottom: 1px solid var(--border);
         font-size: 11px;
       }
       .cookie-row:last-child { border-bottom: none; }
-      .cookie-name { flex: 1; truncate; color: var(--text); font-family: monospace; }
+      .cookie-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-family: monospace; }
       .cookie-domain { color: var(--muted); font-size: 10px; }
     </style>
   </head>

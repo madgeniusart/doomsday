@@ -1,20 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Universal Browser Sync Helper",
-  "version": "1.0.0",
-  "description": "Companion extension for Universal Browser Sync — helps identify cookies and site data for migration.",
-  "permissions": [
-    "cookies",
-    "storage",
-    "tabs",
-    "activeTab"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "version": "1.1.0",
+  "description": "User-initiated browser profile metadata bridge for Universal Browser Sync.",
+  "permissions": ["cookies", "activeTab", "nativeMessaging", "storage"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": {
-    "service_worker": "src/background.js",
-    "type": "module"
+    "service_worker": "src/background.js"
   },
   "action": {
     "default_popup": "src/popup.html",
@@ -30,18 +22,5 @@
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["src/content.js"],
-      "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["src/content.js"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }
